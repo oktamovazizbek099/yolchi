@@ -2,6 +2,8 @@
 
 echo "🚀 Executing Railway Startup Commands..."
 
+export PYTHONPATH=$PYTHONPATH:.
+
 # Run database migrations
 python manage.py migrate --noinput
 
