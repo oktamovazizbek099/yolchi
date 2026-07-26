@@ -1,22 +1,11 @@
 #!/bin/sh
-
-echo "🚀 Executing Railway Startup Commands..."
-
-export PYTHONPATH=$PYTHONPATH:.
-
-# Run database migrations
-python manage.py migrate --noinput
-
-# Collect static files for Django Admin & Dashboard
-python manage.py collectstatic --noinput
-
-# Seed superadmin and initial operator
-python create_superadmin.py
-
-# Start Telegram Bot in background
-echo "🤖 Starting Telegram Bot runner in background..."
-python bot/main.py &
-
-# Start Web Gunicorn server on Railway assigned PORT
-echo "🌐 Starting Django Web Server with Gunicorn..."
-exec gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8000}
+# ESKIRGAN — bu skript ilgari web va botni BITTA jarayonda ishga tushirardi,
+# natijada ikki service ham botni polling qilib Telegram konfliktiga olib kelardi.
+#
+# Endi ikkita alohida skript bor:
+#   start-web.sh — Django + gunicorn
+#   start-bot.sh — faqat Telegram bot
+#
+# Eski sozlamalar buzilmasligi uchun bu fayl xavfsiz variantga (web) yo'naltiradi.
+echo "⚠️  start.sh eskirgan — start-web.sh ishga tushirilmoqda."
+exec sh start-web.sh
