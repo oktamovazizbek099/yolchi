@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Sozlamalar — #2bot{% endblock %}
+
+{% block content %}
+<h1>Sozlamalar</h1>
+<p class="subtitle">Bot xatti-harakatini boshqarish.</p>
+
+<div class="card" style="max-width:620px;">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="check">
+            <input type="checkbox" name="smart_filter" id="smart_filter"
+                   {% if bot_settings.smart_filter %}checked{% endif %}>
+            <div class="t">
+                <label for="smart_filter" style="cursor:pointer;">Aqlli filtr</label>
+                <small>
+                    "salom", "rahmat", emoji va juda qisqa xabarlar buyurtma deb hisoblanmaydi.
+                    O'chirilsa — yo'lovchilar guruhidagi har bir xabar buyurtmaga aylanadi.
+                </small>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="min_order_length">Minimal xabar uzunligi</label>
+            <input type="number" name="min_order_length" id="min_order_length"
+                   value="{{ bot_settings.min_order_length }}" min="1" max="200">
+            <div class="help">Shundan qisqa xabarlar o'tkazib yuboriladi (aqlli filtr yoqilganda).</div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0;">
+
+        <div class="check">
+            <input type="checkbox" name="auto_broadcast" id="auto_broadcast"
+                   {% if bot_settings.auto_broadcast %}checked{% endif %}>
+            <div class="t">
+                <label for="auto_broadcast" style="cursor:pointer;">Haydovchilarga shaxsiy xabar</label>
+                <small>
+                    Buyurtma haydovchilar guruhidan tashqari har bir haydovchiga shaxsiy ham yuboriladi.
+                    Ko'p haydovchi bo'lsa Telegram limitiga urilishi mumkin.
+                </small>
+            </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0;">
+
+        <div class="field">
+            <label for="superadmin_bot_password">Superadmin bot paroli</label>
+            <input type="text" name="superadmin_bot_password" id="superadmin_bot_password"
+                   placeholder="{% if bot_settings.superadmin_bot_password %}O'zgartirmaslik uchun bo'sh qoldiring{% else %}Parol o'rnatilmagan{% endif %}">
+            <div class="help">
+                Telegram botda <code>/admin</code> buyrug'i uchun parol.
+                Bo'sh qoldirilsa hozirgi parol saqlanadi.
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Saqlash</button>
+    </form>
+</div>
+
+<div class="card" style="max-width:620px;">
+    <h3>Holat</h3>
+    <table>
+        <tr><td style="color:var(--muted);">Oxirgi buyurtma raqami</td>
+            <td class="mono">{{ bot_settings.order_counter }}</td></tr>
+        <tr><td style="color:var(--muted);">Aqlli filtr</td>
+            <td>{% if bot_settings.smart_filter %}<span class="badge badge-ok">Yoqilgan</span>
+                {% else %}<span class="badge badge-off">O'chirilgan</span>{% endif %}</td></tr>
+        <tr><td style="color:var(--muted);">Shaxsiy xabar</td>
+            <td>{% if bot_settings.auto_broadcast %}<span class="badge badge-ok">Yoqilgan</span>
+                {% else %}<span class="badge badge-muted">O'chirilgan</span>{% endif %}</td></tr>
+        <tr><td style="color:var(--muted);">Superadmin bot paroli</td>
+            <td>{% if bot_settings.superadmin_bot_password %}<span class="badge badge-ok">O'rnatilgan</span>
+                {% else %}<span class="badge badge-new">O'rnatilmagan</span>{% endif %}</td></tr>
+        <tr><td style="color:var(--muted);">Oxirgi o'zgarish</td>
+            <td class="mono">{{ bot_settings.updated_at|date:"d.m.Y H:i" }}</td></tr>
+    </table>
+</div>
+{% endblock %}

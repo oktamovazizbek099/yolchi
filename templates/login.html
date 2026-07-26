@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Kirish — #2bot{% endblock %}
+
+{% block content %}
+<div style="max-width: 380px; margin: 8vh auto;">
+    <div style="text-align:center; margin-bottom:1.75rem;">
+        <div class="logo-icon" style="width:52px;height:52px;font-size:1.15rem;margin:0 auto .9rem;">#2</div>
+        <h1 style="font-size:1.35rem;">Taxi Dispatcher</h1>
+        <p class="subtitle" style="margin-bottom:0;">Boshqaruv paneliga kirish</p>
+    </div>
+
+    <div class="card">
+        {% if form.errors %}
+            <div class="msg msg-error">
+                Login yoki parol xato. Qayta urinib ko'ring.
+            </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="field">
+                <label for="id_username">Login</label>
+                <input type="text" name="username" id="id_username" autofocus required autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="id_password">Parol</label>
+                <input type="password" name="password" id="id_password" required autocomplete="current-password">
+            </div>
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="btn btn-primary" style="width:100%;">Kirish</button>
+        </form>
+    </div>
+
+    <p style="text-align:center;color:var(--muted);font-size:.8rem;">
+        Faqat superadmin va operatorlar uchun.
+    </p>
+</div>
+{% endblock %}

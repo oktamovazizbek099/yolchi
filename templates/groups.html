@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}Guruhlar — #2bot{% endblock %}
+
+{% block content %}
+<h1>Guruhlar</h1>
+<p class="subtitle">Bot qaysi guruhdan buyurtma olishi va qaysi guruhga yuborishini shu yerda boshqarasiz.</p>
+
+<div class="note">
+    <strong>Eng oson yo'l:</strong> botni guruhga qo'shing va o'sha guruhda yozing —
+    <code>/yolovchi_guruh</code> yoki <code>/haydovchi_guruh</code>. Guruh o'zi ro'yxatga tushadi.<br>
+    Qo'lda qo'shmoqchi bo'lsangiz, guruhda <code>/id</code> yozib chat ID sini oling.
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3>📥 Yo'lovchilar guruhlari</h3>
+        <p style="color:var(--muted);font-size:.83rem;margin-bottom:1rem;">
+            Bot bu guruhlardagi xabarlarni o'qib buyurtmaga aylantiradi.
+        </p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Guruh</th><th>Chat ID</th><th>Holat</th><th></th></tr></thead>
+                <tbody>
+                {% for g in passenger_groups %}
+                    <tr>
+                        <td>{{ g.title|default:"(nomsiz)" }}</td>
+                        <td class="mono">{{ g.chat_id }}</td>
+                        <td>{% if g.is_active %}<span class="badge badge-ok">Aktiv</span>
+                            {% else %}<span class="badge badge-off">O'chirilgan</span>{% endif %}</td>
+                        <td style="white-space:nowrap;">
+                            <form method="post" action="{% url 'group_toggle' g.id %}" class="inline">
+                                {% csrf_token %}
+                                <button class="btn btn-sm">{% if g.is_active %}O'chirish{% else %}Yoqish{% endif %}</button>
+                            </form>
+                            <form method="post" action="{% url 'group_delete' g.id %}" class="inline"
+                                  onsubmit="return confirm('Guruh ro`yxatdan o`chirilsinmi?');">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-danger">🗑</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="empty">Yo'lovchilar guruhi qo'shilmagan.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📤 Haydovchilar guruhlari</h3>
+        <p style="color:var(--muted);font-size:.83rem;margin-bottom:1rem;">
+            Tayyor buyurtmalar shu guruhlarga tashlanadi. Bot bu yerdagi yozishmalarni o'qimaydi.
+        </p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Guruh</th><th>Chat ID</th><th>Holat</th><th></th></tr></thead>
+                <tbody>
+                {% for g in driver_groups %}
+                    <tr>
+                        <td>{{ g.title|default:"(nomsiz)" }}</td>
+                        <td class="mono">{{ g.chat_id }}</td>
+                        <td>{% if g.is_active %}<span class="badge badge-ok">Aktiv</span>
+                            {% else %}<span class="badge badge-off">O'chirilgan</span>{% endif %}</td>
+                        <td style="white-space:nowrap;">
+                            <form method="post" action="{% url 'group_toggle' g.id %}" class="inline">
+                                {% csrf_token %}
+                                <button class="btn btn-sm">{% if g.is_active %}O'chirish{% else %}Yoqish{% endif %}</button>
+                            </form>
+                            <form method="post" action="{% url 'group_delete' g.id %}" class="inline"
+                                  onsubmit="return confirm('Guruh ro`yxatdan o`chirilsinmi?');">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-danger">🗑</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="empty">Haydovchilar guruhi qo'shilmagan.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="max-width:520px;">
+    <h3>Qo'lda guruh qo'shish</h3>
+    <form method="post" action="{% url 'group_add' %}">
+        {% csrf_token %}
+        <div class="field">
+            <label for="chat_id">Chat ID</label>
+            <input type="text" name="chat_id" id="chat_id" placeholder="-1001234567890" required>
+            <div class="help">Guruhda <code>/id</code> buyrug'ini yuborsangiz bot ID ni ko'rsatadi.</div>
+        </div>
+        <div class="field">
+            <label for="title">Guruh nomi</label>
+            <input type="text" name="title" id="title" placeholder="POP CHUST TOSHKENT">
+        </div>
+        <div class="field">
+            <label for="group_type">Turi</label>
+            <select name="group_type" id="group_type">
+                <option value="PASSENGER">📥 Yo'lovchilar guruhi (bot o'qiydi)</option>
+                <option value="DRIVER">📤 Haydovchilar guruhi (bot yozadi)</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Qo'shish</button>
+    </form>
+</div>
+{% endblock %}

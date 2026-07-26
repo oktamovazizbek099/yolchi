@@ -1,6 +1,21 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Announcement, BotSetting
+from .models import User, Announcement, BotSetting, BroadcastMessage, TelegramGroup
+
+
+@admin.register(TelegramGroup)
+class TelegramGroupAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'chat_id', 'group_type', 'is_active', 'added_by', 'created_at')
+    list_filter = ('group_type', 'is_active')
+    search_fields = ('title', 'chat_id')
+    list_editable = ('is_active',)
+
+
+@admin.register(BroadcastMessage)
+class BroadcastMessageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'announcement', 'chat_id', 'message_id', 'is_group', 'created_at')
+    list_filter = ('is_group',)
+    search_fields = ('chat_id', 'announcement__id')
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -43,14 +58,16 @@ class AnnouncementAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'passenger_name', 'passenger_phone', 
         'from_location', 'to_location', 'departure_time', 
-        'status', 'created_by_operator', 'created_at'
+        'status', 'accepted_by_driver', 'accepted_at',
+        'created_by_operator', 'created_at'
     )
-    list_filter = ('status', 'created_at')
+    list_filter = ('status', 'created_at', 'accepted_by_driver')
     search_fields = ('passenger_name', 'passenger_phone', 'raw_text', 'from_location', 'to_location')
-    readonly_fields = ('created_at',)
+    readonly_fields = ('created_at', 'accepted_by_driver', 'accepted_at', 'drivers_group_message_id', 'source_group_id', 'source_group_name')
     ordering = ('-created_at',)
 
 
 @admin.register(BotSetting)
 class BotSettingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'target_group_id', 'auto_broadcast', 'updated_at')
+    list_display = ('id', 'auto_broadcast', 'smart_filter', 'min_order_length',
+                    'order_counter', 'updated_at')

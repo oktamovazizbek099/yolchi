@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Buyurtmalar — #2bot{% endblock %}
+
+{% block content %}
+<h1>Buyurtmalar</h1>
+<p class="subtitle">Yo'lovchilar guruhlaridan tushgan barcha buyurtmalar (oxirgi 100 ta).</p>
+
+<div class="card" style="padding:.85rem 1.25rem;">
+    <form method="get" style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;">
+        <label for="status" style="font-size:.85rem;color:var(--muted);">Holat bo'yicha:</label>
+        <select name="status" id="status" style="padding:.4rem .6rem;border-radius:8px;
+                border:1px solid var(--border);background:#0f172a;color:var(--text);font-size:.85rem;">
+            <option value="">Barchasi</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm">Filtrlash</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Mijoz</th>
+                    <th>Telefon</th>
+                    <th>Manba guruh</th>
+                    <th>Buyurtma matni</th>
+                    <th>Holati</th>
+                    <th>Qabul qilgan</th>
+                    <th>Qabul vaqti</th>
+                    <th>Yaratilgan</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for o in orders %}
+                <tr>
+                    <td class="mono">{{ o.id }}</td>
+                    <td>{{ o.passenger_name }}</td>
+                    <td class="mono">{{ o.passenger_phone|default:"—" }}</td>
+                    <td>{{ o.source_group_name|default:"—" }}</td>
+                    <td class="truncate" title="{{ o.raw_text }}">{{ o.raw_text }}</td>
+                    <td>
+                        {% if o.status == 'NEW' %}<span class="badge badge-new">Kutilmoqda</span>
+                        {% elif o.status == 'BROADCASTED' %}<span class="badge badge-sent">Yuborildi</span>
+                        {% elif o.status == 'ACCEPTED' %}<span class="badge badge-ok">Qabul qilindi</span>
+                        {% else %}<span class="badge badge-off">Bekor qilindi</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if o.accepted_by_driver %}
+                            {{ o.accepted_by_driver.first_name|default:o.accepted_by_driver.username }}
+                            <div class="mono">{{ o.accepted_by_driver.phone_number|default:"" }}</div>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="mono">{{ o.accepted_at|date:"d.m H:i"|default:"—" }}</td>
+                    <td class="mono">{{ o.created_at|date:"d.m H:i" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="9" class="empty">Bu filtr bo'yicha buyurtma topilmadi.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

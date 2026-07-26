@@ -1,69 +1,161 @@
-# 🚖 #2bot - Taxi Group Dispatcher System (Django + Telegram Bot)
+# 🚖 #2bot — Taxi Group Dispatcher (Django + Telegram Bot)
 
-Ushbu loyiha Telegram guruhlaridagi yo'lovchilar e'lonlarini (masalan: *"Toshkentga 9:30 da ketishim kerak"*) avtomatik ushlab olib, ularni ro'yxatdan o'tgan **haydovchilarga** yuboruvchi **Django Web Admin + Telegram Bot** tizimidir.
+Yo'lovchilar guruhiga yozilgan buyurtmalarni avtomatik ushlab olib, shablon formatida
+**haydovchilar guruhiga** tashlaydigan tizim. Buyurtmani birinchi bo'lib "✅ Zakazni yopish"
+tugmasini bosgan haydovchi oladi — va **faqat o'sha haydovchi** yo'lovchining telefoni va
+profilini ko'radi.
 
 ---
 
-## 🏗 Loyiha Tuzilishi (Architecture)
+## 🔑 Asosiy qoida: ikki guruh butunlay ajratilgan
+
+```
+┌──────────────────────────┐         ┌───────────────────────────┐
+│  YO'LOVCHILAR GURUHI     │         │   HAYDOVCHILAR GURUHI     │
+│  (bot faqat O'QIYDI)     │  ─────► │   (bot faqat YOZADI)      │
+│                          │         │                           │
+│  "Axchaga pochta bor"    │         │  🚕 1-BUYURTMA            │
+└──────────────────────────┘         │  🧑 Mijoz: Humoyun        │
+                                     │  🔒 aloqa yopiq           │
+   Bot ro'yxatdagi guruhlardan       │  [✅ Zakazni yopish]      │
+   tashqari HECH QAYERDAN            └───────────────────────────┘
+   xabar olmaydi.                                │
+                                                 │ birinchi bosgan
+                                                 ▼
+                                     ┌───────────────────────────┐
+                                     │  HAYDOVCHIGA SHAXSIY      │
+                                     │  📞 +998946656678         │
+                                     │  💬 @username             │
+                                     │  [🚕 Profil] [🏘 Qo'ng'iroq]│
+                                     └───────────────────────────┘
+```
+
+**Muhim:** haydovchilar guruhidagi yozishmalar hech qachon buyurtmaga aylanmaydi —
+bot faqat `PASSENGER` turidagi ro'yxatdan o'tgan guruhlarni tinglaydi.
+
+---
+
+## 🔒 Aloqa ma'lumotlari maxfiyligi
+
+| Qayerda | Mijoz ismi | Telefon | Username | Profil tugmasi |
+|---|---|---|---|---|
+| Haydovchilar guruhi | ✅ ko'rinadi | ❌ yopiq | ❌ yopiq | ❌ yo'q |
+| Qabul qilgan haydovchiga (shaxsiy) | ✅ | ✅ | ✅ | ✅ |
+| Boshqa haydovchilar | ✅ | ❌ | ❌ | ❌ |
+
+Yo'lovchi raqamini xabar matnining ichiga yozsa ham, u guruh matnida
+`🔒[raqam yopiq]` ko'rinishida niqoblanadi.
+
+---
+
+## 🏗 Tuzilishi
 
 ```
 D:\#2bot\
-  ├── .env                  # Bot Token va Django Secret Key sozlamalari
-  ├── manage.py             # Django boshqaruv fayli
-  ├── run_web.bat           # Web server va Admin panelni ishga tushirish (1-click)
-  ├── run_bot.bat           # Telegram Botni ishga tushirish (1-click)
-  ├── create_superadmin.py  # Boshlang'ich admin va operatorlarni yaratish
-  ├── core/                 # Django asosiy sozlamalari (settings.py, urls.py, wsgi.py)
-  ├── apps/
-  │    └── main/            # Foydalanuvchilar (Operator, Haydovchi), E'lonlar va BotSozlamalari modellari
   ├── bot/
-  │    ├── main.py          # Aiogram 3 Telegram bot asosiy ishga tushirish fayli
-  │    ├── handlers/        # Start, Operator, Haydovchi va Guruh listener buyruqlari
-  │    └── utils/           # Django ORM va Bot o'rtasidagi async bog'lanish (db_api.py)
-  └── templates/            # Web Dashboard paneli (dashboard.html)
+  │    ├── main.py              # Aiogram 3 ishga tushirish
+  │    ├── handlers/
+  │    │    ├── groupsetup.py   # /yolovchi_guruh, /haydovchi_guruh, /id, /holat
+  │    │    ├── superadmin.py   # /admin paneli (guruh, haydovchi, statistika)
+  │    │    ├── start.py        # /start, /help, /login
+  │    │    ├── operator.py     # operator paneli
+  │    │    ├── driver.py       # haydovchi ro'yxati, "Mening buyurtmalarim"
+  │    │    └── group.py        # yo'lovchi guruhi tinglovchisi + qabul qilish
+  │    └── utils/
+  │         ├── db_api.py       # Django ORM <-> bot (async)
+  │         └── filters.py      # aqlli xabar filtri
+  ├── apps/main/                # modellar, web view'lar, admin
+  ├── templates/                # web panel (base, dashboard, groups, drivers, orders, settings)
+  ├── core/                     # Django settings
+  └── create_superadmin.py      # boshlang'ich foydalanuvchilar
 ```
 
 ---
 
-## 👥 Foydalanuvchilar Rolari va Avtorizatsiya
+## 🚀 Ishga tushirish
 
-### 1. 👑 Superadmin (Web Admin)
-- Web brauzer orqali `http://127.0.0.1:8000/admin/` manziliga kiradi.
-- Operatorlarni yaratadi va har bir operatorga **Telegram Bot Parolini** (`operator_password`) belgilaydi.
-- Haydovchilar ro'yxati, telefon raqamlari va e'lonlar statistikasini to'liq nazorat qiladi.
-
-### 2. 🎧 Operator (Telegram Bot & Web)
-- Telegram botda `/start` tugmasini bosgach, **"🔑 Operator sifatida kirish"** bo'limini tanlaydi.
-- Web panelda Superadmin tomonidan berilgan **Parolni** kiritadi.
-- Parol to'g'ri bo'lsa, Telegram botda Operator paneli ochiladi:
-  - 📥 **Kutilayotgan e'lonlar:** Guruhdan tushgan yangi yo'lovchi xabarlarini ko'rish va haydovchilarga yuborish.
-  - 🚗 **Haydovchilar:** Aktiv haydovchilar soni va ro'yxatini ko'rish.
-
-### 3. 🚗 Haydovchilar (Drivers)
-- Botda `/start` bossa, **"📲 Haydovchi bo'lib ro'yxatdan o'tish"** (telefon raqamini yuborish) tugmasi chiqadi.
-- Telefon raqami yuborilgach, haydovchi bazaga saqlanadi.
-- Guruhga yangi yo me'lon tushganda, bot orqali haydovchiga yo'lovchining matni va bog'lanish ma'lumotlari (telefon / telegram nick) keladi.
-
-### 4. 👥 Guruh Yo'lovchilari (Telegram Group)
-- Bot guruhda bo'ladi va yo'lovchilar yozgan xabarlarni tutib oladi.
-- Guruh xabari bazaga e'lon sifatida saqlanadi va operator paneliga yoki avtomatik haydovchilarga yuboriladi.
-
----
-
-## 🚀 Ishga Tushirish Yo'riqnomasi
-
-### 1. `.env` faylida Telegram Bot Tokeningizni kiriting:
-`D:\#2bot\.env` faylini oching va `BOT_TOKEN` qiymatiga bot tokeningizni yozing:
+### 1. `.env`
 ```env
-BOT_TOKEN=7777777777:AAEb...YOUR_TELEGRAM_BOT_TOKEN...
+BOT_TOKEN=1234567890:AA...
+DJANGO_SECRET_KEY=uzun-tasodifiy-satr
+DEBUG=False
+ADMIN_PASSWORD=admin123
+SUPERADMIN_BOT_PASSWORD=admin12345
 ```
 
-### 2. Web Panelni ishga tushirish:
-`D:\#2bot\run_web.bat` faylini ikki marta bosing.
-- Django migratsiyalar bajariladi.
-- Boshlang'ich `admin` (parol: `admin123`) yaratiladi.
-- Server `http://127.0.0.1:8000/` va Admin panel `http://127.0.0.1:8000/admin/` manzilida ishga tushadi.
+### 2. Web panel
+```
+run_web.bat
+```
+→ `http://127.0.0.1:8000/` — **login talab qilinadi** (`admin` / `admin123`)
 
-### 3. Telegram Botni ishga tushirish:
-`D:\#2bot\run_bot.bat` faylini ikki marta bosing.
-- Bot Telegram bilan bog'lanadi va xabarlarni qabul qilishni boshlaydi.
+### 3. Bot
+```
+run_bot.bat
+```
+
+### 4. Guruhlarni sozlash (bir marta)
+
+1. Botni **yo'lovchilar guruhiga** qo'shing → o'sha guruhda `/yolovchi_guruh` yozing
+2. Botni **haydovchilar guruhiga** qo'shing (admin qilib) → `/haydovchi_guruh` yozing
+3. Tekshirish: guruhda `/holat`
+
+> Buyruqlarni ishlatish uchun avval botga shaxsiy `/admin` yozib parol bilan kiring.
+
+Yoki web panelda: **Guruhlar → Qo'lda guruh qo'shish** (chat ID ni guruhda `/id` bilan oling).
+
+---
+
+## 👥 Rollar
+
+### 👑 Superadmin
+- **Web:** `/` — statistika, guruhlar, haydovchilar, buyurtmalar, sozlamalar
+- **Bot:** `/admin` + parol → guruhlarni yoqish/o'chirish, haydovchilarni bloklash, statistika
+- Django admin: `/admin/`
+
+### 🎧 Operator
+- Botda `/start` → "🔑 Operator sifatida kirish" → web admin bergan parol
+- Kutilayotgan buyurtmalarni qo'lda haydovchilarga yuborish
+- Web panelga ham kira oladi (`is_staff`)
+
+### 🚗 Haydovchi
+- Botda `/start` → telefon raqamni yuborish
+- Haydovchilar guruhida "✅ Zakazni yopish" bosib buyurtma oladi
+- "📋 Mening buyurtmalarim" — olgan buyurtmalari va mijoz aloqasi
+
+---
+
+## 🧠 Aqlli filtr
+
+Yo'lovchilar guruhidagi har bir xabar buyurtma emas. O'tkazib yuboriladi:
+
+| Xabar | Natija |
+|---|---|
+| `Axchaga pochta bor edi` | ✅ buyurtma |
+| `Toshkent 2 kishi` | ✅ buyurtma |
+| `salom` / `rahmat` / `ok` | ⏭ o'tkazildi |
+| `👍👍👍` | ⏭ o'tkazildi |
+| `/start` | ⏭ o'tkazildi |
+| `https://t.me/kanal` | ⏭ o'tkazildi |
+
+Sozlash: web panel → **Sozlamalar** (minimal uzunlik, filtrni o'chirish).
+
+---
+
+## ⚙️ Sozlamalar
+
+| Sozlama | Ma'nosi |
+|---|---|
+| **Aqlli filtr** | Salomlashish/emoji xabarlarini o'tkazib yuborish |
+| **Minimal uzunlik** | Shundan qisqa xabarlar buyurtma emas (default 10) |
+| **Shaxsiy xabar** | Buyurtmani guruhdan tashqari har bir haydovchiga shaxsiy ham yuborish |
+| **Superadmin bot paroli** | `/admin` buyrug'i uchun parol |
+
+---
+
+## ⚠️ Deploy uchun eslatma
+
+- **SQLite Railway'da vaqtinchalik** — har deploydan keyin ma'lumotlar yo'qoladi.
+  Ishlab chiqarish uchun Postgres ulash kerak.
+- `start.sh` botni fon jarayonida ishga tushiradi — bot yiqilsa Railway sezmaydi.
+  Bot va webni **alohida service** qilish tavsiya etiladi.

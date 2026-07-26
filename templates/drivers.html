@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Haydovchilar — #2bot{% endblock %}
+
+{% block content %}
+<h1>Haydovchilar</h1>
+<p class="subtitle">Botda ro'yxatdan o'tgan haydovchilar. Bloklangan haydovchi buyurtma qabul qila olmaydi.</p>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Ism</th>
+                    <th>Telefon</th>
+                    <th>Telegram ID</th>
+                    <th>Qabul qilgan</th>
+                    <th>Holat</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for d in drivers %}
+                <tr>
+                    <td class="mono">{{ d.id }}</td>
+                    <td>{{ d.first_name|default:d.username }}</td>
+                    <td class="mono">{{ d.phone_number|default:"—" }}</td>
+                    <td class="mono">{{ d.telegram_id|default:"—" }}</td>
+                    <td class="mono">{{ d.accepted_orders.count }}</td>
+                    <td>
+                        {% if d.is_active %}<span class="badge badge-ok">Aktiv</span>
+                        {% else %}<span class="badge badge-off">Bloklangan</span>{% endif %}
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <form method="post" action="{% url 'driver_toggle' d.id %}" class="inline">
+                            {% csrf_token %}
+                            <button class="btn btn-sm">{% if d.is_active %}Bloklash{% else %}Ochish{% endif %}</button>
+                        </form>
+                        <form method="post" action="{% url 'driver_delete' d.id %}" class="inline"
+                              onsubmit="return confirm('Haydovchi butunlay o`chirilsinmi?');">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-danger">🗑</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="empty">
+                    Hali birorta haydovchi ro'yxatdan o'tmagan.<br>
+                    Haydovchi botga <code>/start</code> yozib telefon raqamini yuborishi kerak.
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

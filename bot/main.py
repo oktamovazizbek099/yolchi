@@ -8,12 +8,24 @@ from bot.handlers import routers
 logging.basicConfig(level=logging.INFO)
 
 async def setup_bot_commands(bot: Bot):
-    commands = [
+    from aiogram.types import BotCommandScopeAllPrivateChats, BotCommandScopeAllGroupChats
+
+    private_commands = [
         BotCommand(command="start", description="Botni ishga tushirish / Bosh menyu"),
         BotCommand(command="login", description="Operator sifatida tizimga kirish"),
+        BotCommand(command="admin", description="Superadmin paneli"),
         BotCommand(command="help", description="Yordam va yo'riqnoma"),
     ]
-    await bot.set_my_commands(commands)
+    group_commands = [
+        BotCommand(command="holat", description="Guruh qanday sozlangan"),
+        BotCommand(command="yolovchi_guruh", description="Bu guruh yo'lovchilar guruhi (admin)"),
+        BotCommand(command="haydovchi_guruh", description="Bu guruh haydovchilar guruhi (admin)"),
+        BotCommand(command="guruh_ochir", description="Guruhni ro'yxatdan chiqarish (admin)"),
+        BotCommand(command="id", description="Guruh chat ID sini ko'rsatish"),
+    ]
+
+    await bot.set_my_commands(private_commands, scope=BotCommandScopeAllPrivateChats())
+    await bot.set_my_commands(group_commands, scope=BotCommandScopeAllGroupChats())
 
 async def main():
     if not BOT_TOKEN or BOT_TOKEN == "7777777777:CHANGE_ME_IN_ENV":
