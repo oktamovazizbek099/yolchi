@@ -1,0 +1,16 @@
+# Shell skriptlari Linux'da (Railway) ishlaydi — har doim LF bilan saqlansin.
+# CRLF bo'lsa "bad interpreter" yoki "not found" xatosi chiqadi.
+*.sh text eol=lf
+Procfile text eol=lf
+
+# Python va konfiguratsiya
+*.py text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+
+# Binar fayllar
+*.jpg binary
+*.png binary
+*.sqlite3 binary
