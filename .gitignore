@@ -23,3 +23,7 @@ db.sqlite3-journal
 .idea/
 .vscode/
 .DS_Store
+
+# Railway CLI vaqtinchalik fayllari
+.railway/
+.railway-config-pull-*/
