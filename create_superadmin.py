@@ -1,15 +1,30 @@
 """
-Boshlang'ich foydalanuvchilarni yaratish.
+Boshlang'ich foydalanuvchilarni yaratish va parollarni sinxronlash.
 
-Parollarni .env orqali berish mumkin:
-  ADMIN_PASSWORD          — web panelga kirish paroli (default: admin123)
-  SUPERADMIN_BOT_PASSWORD — Telegram botda /admin uchun parol (default: admin12345)
-  OPERATOR_BOT_PASSWORD   — operatorning bot paroli (default: op12345password)
+Parollar .env / Railway env orqali beriladi:
+  ADMIN_PASSWORD          — web panelga kirish paroli
+  SUPERADMIN_BOT_PASSWORD — Telegram botda /admin uchun parol
+  OPERATOR_BOT_PASSWORD   — operatorning bot paroli
+
+MUHIM: agar bu o'zgaruvchilar berilgan bo'lsa, ular ASOSIY manba hisoblanadi va
+har deployda mavjud foydalanuvchiga ham qo'llanadi. Aks holda bir marta standart
+parol bilan yaratilgan hisob abadiy o'sha parolda qolib ketardi.
+
+Parolni panel orqali o'zgartirmoqchi bo'lsangiz — avval Railway'dagi env
+qiymatini yangilang, aks holda keyingi deployda eskisiga qaytadi.
 """
 import os
 import sys
 
 import django
+
+# Windows konsoli (cp1251) emoji'da yiqilib, skriptni yarim yo'lda to'xtatib
+# qo'ymasligi uchun. Railway'da (UTF-8) baribir ta'siri yo'q.
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except (AttributeError, ValueError):
+    pass
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
@@ -21,9 +36,14 @@ from apps.main.models import BotSetting, RoleChoices, User  # noqa: E402
 
 load_dotenv()
 
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
-SUPERADMIN_BOT_PASSWORD = os.getenv('SUPERADMIN_BOT_PASSWORD', 'admin12345')
-OPERATOR_BOT_PASSWORD = os.getenv('OPERATOR_BOT_PASSWORD', 'op12345password')
+# Env'da berilganmi? Berilgan bo'lsa mavjud hisoblarga ham majburan qo'llanadi.
+ADMIN_PASSWORD_ENV = os.getenv('ADMIN_PASSWORD')
+SUPERADMIN_BOT_PASSWORD_ENV = os.getenv('SUPERADMIN_BOT_PASSWORD')
+OPERATOR_BOT_PASSWORD_ENV = os.getenv('OPERATOR_BOT_PASSWORD')
+
+ADMIN_PASSWORD = ADMIN_PASSWORD_ENV or 'admin123'
+SUPERADMIN_BOT_PASSWORD = SUPERADMIN_BOT_PASSWORD_ENV or 'admin12345'
+OPERATOR_BOT_PASSWORD = OPERATOR_BOT_PASSWORD_ENV or 'op12345password'
 
 
 def create_initial_users():
@@ -43,16 +63,26 @@ def create_initial_users():
         admin_user.set_password(ADMIN_PASSWORD)
         admin_user.operator_password = SUPERADMIN_BOT_PASSWORD
         admin_user.save()
-        print(f"✅ Superadmin yaratildi.  Web login: admin | parol: {ADMIN_PASSWORD}")
-        print(f"   Telegram /admin paroli: {SUPERADMIN_BOT_PASSWORD}")
+        print("✅ Superadmin yaratildi (login: admin).")
     else:
-        # Bot paroli yo'q bo'lsa to'ldiramiz (eski bazalar uchun)
-        if not admin_user.operator_password:
+        changed = []
+        # Env'da parol berilgan bo'lsa — u asosiy manba
+        if ADMIN_PASSWORD_ENV and not admin_user.check_password(ADMIN_PASSWORD_ENV):
+            admin_user.set_password(ADMIN_PASSWORD_ENV)
+            changed.append('web paroli')
+        if SUPERADMIN_BOT_PASSWORD_ENV and \
+                admin_user.operator_password != SUPERADMIN_BOT_PASSWORD_ENV:
+            admin_user.operator_password = SUPERADMIN_BOT_PASSWORD_ENV
+            changed.append('bot paroli')
+        elif not admin_user.operator_password:
             admin_user.operator_password = SUPERADMIN_BOT_PASSWORD
+            changed.append('bot paroli')
+
+        if changed:
             admin_user.save()
-            print(f"ℹ️ Superadminga bot paroli qo'shildi: {SUPERADMIN_BOT_PASSWORD}")
+            print(f"🔑 Superadmin parollari env'dan yangilandi: {', '.join(changed)}")
         else:
-            print("ℹ️ Superadmin 'admin' allaqachon mavjud.")
+            print("ℹ️ Superadmin 'admin' o'zgarishsiz.")
 
     # 2. Namuna operator
     op_user, created_op = User.objects.get_or_create(
@@ -66,15 +96,24 @@ def create_initial_users():
         }
     )
     if created_op:
-        op_user.set_password('operator123')
+        op_user.set_password(OPERATOR_BOT_PASSWORD)
         op_user.save()
-        print(f"✅ Operator 'operator1' yaratildi. Bot paroli: {OPERATOR_BOT_PASSWORD}")
+        print("✅ Operator 'operator1' yaratildi.")
+    elif OPERATOR_BOT_PASSWORD_ENV and op_user.operator_password != OPERATOR_BOT_PASSWORD_ENV:
+        op_user.operator_password = OPERATOR_BOT_PASSWORD_ENV
+        op_user.set_password(OPERATOR_BOT_PASSWORD_ENV)
+        op_user.save()
+        print("🔑 Operator paroli env'dan yangilandi.")
     else:
-        print("ℹ️ Operator 'operator1' allaqachon mavjud.")
+        print("ℹ️ Operator 'operator1' o'zgarishsiz.")
 
     # 3. Bot sozlamalari qatori
     setting, created_set = BotSetting.objects.get_or_create(id=1)
-    if not setting.superadmin_bot_password:
+    if SUPERADMIN_BOT_PASSWORD_ENV and \
+            setting.superadmin_bot_password != SUPERADMIN_BOT_PASSWORD_ENV:
+        setting.superadmin_bot_password = SUPERADMIN_BOT_PASSWORD_ENV
+        setting.save()
+    elif not setting.superadmin_bot_password:
         setting.superadmin_bot_password = SUPERADMIN_BOT_PASSWORD
         setting.save()
     if created_set:
